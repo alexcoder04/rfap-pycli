@@ -25,5 +25,5 @@ applications and protocol specification.
  - https://github.com/alexcoder04/rfap - protocol specification
  - https://github.com/alexcoder04/rfap-go-server - reference server implementation
  - https://github.com/alexcoder04/librfap - Python library
- - https://github.com/BoettcherDasOriginal/rfab-cs-lib - C# library
+ - https://github.com/BoettcherDasOriginal/rfap-cs-lib - C# library
 
