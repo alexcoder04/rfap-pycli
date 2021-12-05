@@ -90,6 +90,9 @@ def command_read_file(client: librfap.Client, pwd: str, args: list) -> None:
     if metadata["ErrorCode"] != 0:
         print(f"{Fore.RED}Error: {metadata['ErrorMessage']}{Style.RESET_ALL}")
     else:
+        if not metadata["FileType"].startswith("text/"):
+            print(Fore.MAGENTA + "Binary file (" + metadata["FileType"] + "), not shown" + Style.RESET_ALL)
+            return
         content_string = content.decode("utf-8")
         if not content_string.endswith("\n"):
             content_string += Fore.BLACK + Back.WHITE + "%" + Style.RESET_ALL + "\n"
