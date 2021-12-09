@@ -9,6 +9,12 @@ applications and protocol specification.
  - Python 3.6+
  - [librfap](https://github.com/alexcoder04/librfap)
 
+As we are in an early development stage, big changes come often and not
+everything is backward- and forward-compatible. So always check the required
+librfap version in the release notes. The bleeding-edge version from this repo
+should be compatible with the bleeding-edge version of librfap, although it
+might not always the case.
+
 ## Installation
 
 ```sh
