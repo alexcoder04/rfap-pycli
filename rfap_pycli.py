@@ -8,6 +8,7 @@ import sys
 
 PROMPT = Fore.CYAN + "rfap> " + Style.RESET_ALL
 COLORED_LS = False
+DEBUG = False
 
 def enter_command():
     inp = input(PROMPT).split()
@@ -115,9 +116,9 @@ if __name__ == "__main__":
     colorama.init()
     server_address = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "s:c", ["server-address=", "--colored-ls"])
+        opts, args = getopt.getopt(sys.argv[1:], "s:cd", ["server-address=", "--colored-ls", "--debug"])
     except getopt.GetoptError:
-        print(sys.argv[0], "-s server_address")
+        print(sys.argv[0], "[-d] [-c] [-s server_address]")
         sys.exit(1)
     for opt, arg in opts:
         if opt in ("-s", "--server-address"):
@@ -125,6 +126,8 @@ if __name__ == "__main__":
             continue
         if opt in ("-c", "--colored-ls"):
             COLORED_LS = True
+        if opt in ("-d", "--debug"):
+            DEBUG = True
     if server_address is None:
         server_address = input("server address: ")
 
@@ -151,6 +154,11 @@ if __name__ == "__main__":
             command_ping(client)
         elif command in ("cat", "read", "print"):
             command_read_file(client, pwd, args)
+        elif command == "exec":
+            if DEBUG:
+                exec(input("EXEC> "))
+            else:
+                print(Fore.RED + "This command is only available in debug mode." + Style.RESET_ALL)
         else:
             print(Fore.RED + command  + ": unknown command, type 'help' for help" + Style.RESET_ALL)
         command, args = enter_command()
