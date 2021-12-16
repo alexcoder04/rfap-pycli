@@ -14,10 +14,10 @@ applications and protocol specification.
 
 ## Requirements
 
- - Python 3.6+
+ - Python 3.10+
  - [librfap](https://github.com/alexcoder04/librfap)
 
-As we are in an early development stage, big changes come often and not
+As we are in an early development stage, so big changes come often and not
 everything is backward- and forward-compatible. So always check the required
 librfap version in the release notes. The bleeding-edge version from this repo
 should be compatible with the bleeding-edge version of librfap, although it
@@ -28,13 +28,13 @@ might not always the case.
 ```sh
 git clone https://github.com/alexcoder04/rfap-pycli
 cd rfap-pycli
-make install # not working right now, in progress
+sudo make install
 ```
 
 ## Usage
 
 ```
-./rfap_pycli.py [-s server-address] [-c]
+./rfap_pycli.py [-s server-address] [-c] [-d]
 ```
 
 ### Documentation
@@ -45,13 +45,14 @@ make install # not working right now, in progress
 
 | commands                                       | description                              |
 |------------------------------------------------|------------------------------------------|
-| `help`                                         | print help                               |
-| `pwd`                                          | print working directory                  |
+| `cat <file>`, `read <file>` `print <file>`     | show content of a file                   |
 | `cd <folder>`                                  | change working directory                 |
-| `ls <folder>`, `list <folder>`, `dir <folder>` | list directory                           |
 | `clear`, `cls`                                 | clear screen                             |
+| `exec`, `debug`                                | execute python command (debug mode only) |
 | `exit`, `quit`, `:q`                           | disconnect and exit                      |
-| `exec`                                         | execute python command (debug mode only) |
+| `help`                                         | print help                               |
+| `ls <folder>`, `list <folder>`, `dir <folder>` | list directory                           |
+| `pwd`                                          | print working directory                  |
 
 ## Related projects
 
