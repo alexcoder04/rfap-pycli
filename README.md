@@ -1,6 +1,14 @@
 
 # rfap-pycli
 
+[![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/alexcoder04/rfap-pycli?include_prereleases)](https://github.com/alexcoder04/rfap-pycli/releases/latest)
+[![GitHub top language](https://img.shields.io/github/languages/top/alexcoder04/rfap-pycli)](https://github.com/alexcoder04/rfap-pycli/search?l=go)
+[![GitHub](https://img.shields.io/github/license/alexcoder04/rfap-pycli)](https://github.com/alexcoder04/rfap-pycli/blob/main/LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/alexcoder04/rfap-pycli)](https://github.com/alexcoder04/rfap-pycli/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/alexcoder04/rfap-pycli)](https://github.com/alexcoder04/rfap-pycli/pulls)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/alexcoder04/rfap-pycli)](https://github.com/alexcoder04/rfap-pycli/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors-anon/alexcoder04/rfap-pycli)](https://github.com/alexcoder04/rfap-pycli/graphs/contributors)
+
 CLI Client for rfap. See [related projects](#related-projects) for compatible
 applications and protocol specification.
 
