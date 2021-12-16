@@ -38,6 +38,7 @@ class RfapCliApp:
         self.client = librfap.Client(self.settings["Server"], port=self.settings["Port"])
 
         self.running = True
+        self.time_left = 60
         self.keep_alive_thread = threading.Thread(target=self.keep_alive)
         self.socket_lock = threading.Lock()
         self.keep_alive_thread.start()
@@ -65,12 +66,15 @@ class RfapCliApp:
 
     def keep_alive(self):
         while True:
-            for _ in range(12):
-                time.sleep(5)
-                if not self.running:
-                    return
+            if not self.running:
+                return
+            time.sleep(5)
             self.socket_lock.acquire()
-            self.client.rfap_ping()
+            if self.time_left <= 5:
+                self.client.rfap_ping()
+                self.time_left = 60
+            else:
+                self.time_left -= 5
             self.socket_lock.release()
 
     def enter_cmd(self):
@@ -118,6 +122,7 @@ class RfapCliApp:
             return
         self.socket_lock.acquire()
         metadata, content = self.client.rfap_file_read(argument)
+        self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
@@ -140,6 +145,7 @@ class RfapCliApp:
             return
         self.socket_lock.acquire()
         metadata = self.client.rfap_info(argument)
+        self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}cannot cd to '{argument}': {metadata['ErrorMessage']}{self.style.RESET_ALL}")
@@ -169,6 +175,7 @@ class RfapCliApp:
             argument = self.pwd
         self.socket_lock.acquire()
         metadata = self.client.rfap_info(argument)
+        self.time_left = 60
         self.socket_lock.release()
         pprint.pprint(metadata)
 
@@ -179,6 +186,7 @@ class RfapCliApp:
             argument = self.pwd
         self.socket_lock.acquire()
         metadata, files = self.client.rfap_directory_read(argument)
+        self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
@@ -191,6 +199,7 @@ class RfapCliApp:
         for f in files:
             self.socket_lock.acquire()
             m = self.client.rfap_info(argument + "/" + f)
+            self.time_left = 60
             self.socket_lock.release()
             if m["Type"] == "d":
                 print(f"{self.style_fg.BLUE}{f}/{self.style.RESET_ALL}")
@@ -202,6 +211,7 @@ class RfapCliApp:
     def cmd_ping(self):
         self.socket_lock.acquire()
         self.client.rfap_ping()
+        self.time_left = 60
         self.socket_lock.release()
         print(f"{self.style_fg.GREEN}sent ping{self.style.RESET_ALL}")
 
@@ -214,6 +224,7 @@ class RfapCliApp:
             return
         self.socket_lock.acquire()
         metadata, content = self.client.rfap_file_read(argument)
+        self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
@@ -228,40 +239,45 @@ class RfapCliApp:
 
     # mainloop
     def run(self):
-        self.enter_cmd()
         while self.cmd not in ("exit", "quit", ":q"):
-            match self.cmd:
-                case "cat" | "read" | "print":
-                    self.cmd_cat()
-                case "cd":
-                    self.cmd_cd()
-                case "clear" | "cls":
-                    self.cmd_clear()
-                case "debug" | "exec":
-                    if self.settings["Debug"]:
-                        exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
-                    else:
-                        print(f"{self.style_fg.RED}Error: this command is only available in debug mode.{self.style.RESET_ALL}")
-                case "help":
-                    self.cmd_help()
-                case "info":
-                    self.cmd_info()
-                case "ls" | "list" | "dir":
-                    self.cmd_ls()
-                case "ping":
-                    self.cmd_ping()
-                case "pwd":
-                    print(self.pwd)
-                case "save" | "download" | "dl":
-                    self.cmd_save()
-                case _:
-                    print(f"{self.style_fg.RED}{self.cmd}: command not found, type 'help' for help{self.style.RESET_ALL}")
-            self.enter_cmd()
+            try:
+                match self.cmd:
+                    case "cat" | "read" | "print":
+                        self.cmd_cat()
+                    case "cd":
+                        self.cmd_cd()
+                    case "clear" | "cls":
+                        self.cmd_clear()
+                    case "debug" | "exec":
+                        if self.settings["Debug"]:
+                            exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
+                        else:
+                            print(f"{self.style_fg.RED}Error: this command is only available in debug mode.{self.style.RESET_ALL}")
+                    case "help":
+                        self.cmd_help()
+                    case "info":
+                        self.cmd_info()
+                    case "ls" | "list" | "dir":
+                        self.cmd_ls()
+                    case "ping":
+                        self.cmd_ping()
+                    case "pwd":
+                        print(self.pwd)
+                    case "save" | "download" | "dl":
+                        self.cmd_save()
+                    case "":
+                        pass
+                    case _:
+                        print(f"{self.style_fg.RED}{self.cmd}: command not found, type 'help' for help{self.style.RESET_ALL}")
+                self.enter_cmd()
+            except KeyboardInterrupt:
+                break
 
         print(f"{self.style_fg.YELLOW}Disconnecting, please wait...{self.style.RESET_ALL}")
         self.running = False
         self.keep_alive_thread.join()
         self.client.rfap_disconnect()
+        self.time_left = 60
         print(f"{self.style_fg.GREEN}done.{self.style.RESET_ALL}")
 
 # IFMAIN
