@@ -85,6 +85,12 @@ class RfapCliApp:
             return "/"
         return "/" + "/".join(path.split("/")[:-1])
 
+    def confirm(self, msg: str = "Do you really want to continue"):
+        inp = input(f"{self.style_fg.YELLOW}{msg} [y/n]? {self.style.RESET_ALL}")
+        if inp in ("y", "Y", "yes", "YES", "Yes"):
+            return True
+        return False
+
     # cli commands
     def cmd_cat(self):
         try:
@@ -169,6 +175,25 @@ class RfapCliApp:
         self.client.rfap_ping()
         print(f"{self.style_fg.GREEN}sent ping{self.style.RESET_ALL}")
 
+    def cmd_save(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+            destin = self.args[1]
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide a remote source and a local destination{self.style.RESET_ALL}")
+            return
+        metadata, content = self.client.rfap_file_read(argument)
+        if metadata["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            return
+        if os.path.exists(destin):
+            if not self.confirm(f"Warning: '{destin}' already exists. Overwrite"):
+                return
+        f = open(destin, "wb")
+        f.write(content)
+        f.close()
+        print(f"{self.style_fg.GREEN}Saved '{argument}' to '{destin}'.{self.style.RESET_ALL}")
+
     # mainloop
     def run(self):
         self.enter_cmd()
@@ -195,6 +220,8 @@ class RfapCliApp:
                     self.cmd_ping()
                 case "pwd":
                     print(self.pwd)
+                case "save" | "download" | "dl":
+                    self.cmd_save()
                 case _:
                     print(f"{self.style_fg.RED}{self.cmd}: command not found, type 'help' for help{self.style.RESET_ALL}")
             self.enter_cmd()
