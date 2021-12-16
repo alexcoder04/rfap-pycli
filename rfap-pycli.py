@@ -25,7 +25,7 @@ class RfapCliApp:
         self.style_fg = colorama.Fore
         self.style_bg = colorama.Back
 
-        self.prompt = f"{self.style_fg.CYAN}rfap> {self.style.RESET_ALL}"
+        self.prompt = f"{self.style_fg.CYAN}rfap {self.style_fg.BLUE}%s{self.style.RESET_ALL} > "
         self.pwd = "/"
         self.cmd = ""
         self.args = ()
@@ -56,7 +56,7 @@ class RfapCliApp:
                 self.settings["Debug"] = True
 
     def enter_cmd(self):
-        inp = input(self.prompt).split()
+        inp = input(self.prompt % self.pwd).split()
         self.cmd, self.args = inp[0], tuple(inp[1:])
 
     def abspath(self, path: str, pwd: str) -> str:

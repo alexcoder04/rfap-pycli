@@ -23,6 +23,10 @@ librfap version in the release notes. The bleeding-edge version from this repo
 should be compatible with the bleeding-edge version of librfap, although it
 might not always the case.
 
+Please note that **Python 3.10** is required because of use of new syntax
+structures in this project which were added in Python 3.10
+(match-case-statement).
+
 ## Installation
 
 ```sh
@@ -53,6 +57,7 @@ sudo make install
 | `help`                                         | print help                               |
 | `ls <folder>`, `list <folder>`, `dir <folder>` | list directory                           |
 | `pwd`                                          | print working directory                  |
+| `save <file> <local destination>`              | save file locally                        |
 
 ## Related projects
 
