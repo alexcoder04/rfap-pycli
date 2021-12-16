@@ -2,180 +2,209 @@
 
 import librfap
 import colorama
-from colorama import Fore, Back, Style
+import pprint
 import getopt
 import sys
 import os
 
-PROMPT = Fore.CYAN + "rfap> " + Style.RESET_ALL
-COLORED_LS = False
-DEBUG = False
+class RfapCliApp:
+    # default settings
+    settings = {
+            "Server": "localhost",
+            "Port": 6700,
+            "ColoredLS": False,
+            "Debug": False
+            }
 
-def enter_command():
-    inp = input(PROMPT).split()
-    return inp[0], inp[1:]
+    # app init
+    def __init__(self):
+        print("Welcome to rfap-pycli!")
 
-def abspath(path: str, pwd: str) -> str:
-    if path.startswith("/"):
-        return path
-    if path == ".":
-        return pwd
-    if path == "..":
-        return parent_dir(pwd)
+        colorama.init()
+        self.style = colorama.Style
+        self.style_fg = colorama.Fore
+        self.style_bg = colorama.Back
 
-    while path.endswith("/"):
-        path = path[:-1]
-    while pwd.endswith("/"):
-        pwd = pwd[:-1]
+        self.prompt = f"{self.style_fg.CYAN}rfap> {self.style.RESET_ALL}"
+        self.pwd = "/"
+        self.cmd = ""
+        self.args = ()
 
-    if path.startswith("../"):
-        return parent_dir(pwd) + "/" + path[3:]
-    if path.startswith("./"):
-        return pwd + "/" + path[2:]
-    return pwd + "/" + path
+        self.configure()
 
-def parent_dir(path: str) -> str:
-    if path == "/":
-        return "/"
-    return "/" + "/".join(path.split("/")[:-1])
+        print(f"{self.style_fg.YELLOW}Connecting to {self.settings['Server']}:{self.settings['Port']}...{self.style.RESET_ALL}")
+        self.client = librfap.Client(self.settings["Server"], port=self.settings["Port"])
+        self.cmd_ping()
+        print(f"{self.style_fg.GREEN}Connected to {self.settings['Server']}:{self.settings['Port']}{self.style.RESET_ALL}")
 
-def command_clear():
-    if os.name == "posix":
-        os.system("clear")
-        return
-    if os.name == "nt":
-        os.system("cls")
-        return
-    print(f"{Fore.RED}Error: clear command not available in {os.name} operating system.{Style.RESET_ALL}")
+    # helper functions
+    def configure(self):
+        try:
+            opts, _ = getopt.getopt(sys.argv[1:], "s:cd", ["server-address=", "--colored-ls", "--debug"])
+        except getopt.GetoptError:
+            print(f"{self.style_fg.RED}Error: invalid arguments{self.style.RESET_ALL}")
+            print("Usage:", sys.argv[0], "[-d] [-c] [-s server_address]")
+            sys.exit(1)
+        for opt, arg in opts:
+            if opt in ("-s", "--server-address"):
+                self.settings["Server"] = arg
+                continue
+            if opt in ("-c", "--colored-ls"):
+                self.settings["ColoredLS"] = True
+                continue
+            if opt in ("-d", "--debug"):
+                self.settings["Debug"] = True
 
-def command_cd(oldpwd: str, args: list) -> str:
-    try:
-        argument = abspath(args[0], oldpwd)
-    except IndexError:
-        argument = "/"
-    if argument == oldpwd:
-        print(Fore.GREEN + oldpwd + Style.RESET_ALL)
-        return oldpwd
-    metadata = client.rfap_info(argument)
-    if metadata["ErrorCode"] != 0:
-        print(f"{Fore.RED}cannot cd to '{argument}': {metadata['ErrorMessage']}{Style.RESET_ALL}")
-        argument = oldpwd
-    else:
-        if metadata["Type"] != "d":
-            print(f"{Fore.RED}cannot cd to '{argument}': not a directory{Style.RESET_ALL}")
-            argument = oldpwd
-        else:
-            print(argument)
-    return argument
+    def enter_cmd(self):
+        inp = input(self.prompt).split()
+        self.cmd, self.args = inp[0], tuple(inp[1:])
 
-def command_read_directory(client: librfap.Client, pwd: str, args: list) -> None:
-    global COLORED_LS
-    try:
-        argument = abspath(args[0], pwd)
-    except IndexError:
-        argument = pwd
-    metadata, files = client.rfap_directory_read(argument)
-    if metadata["ErrorCode"] != 0:
-        print(f"{Fore.RED}Error: {metadata['ErrorMessage']}{Style.RESET_ALL}")
-        return
-    if not COLORED_LS:
-        for f in files:
-            print(f)
-        return
-    regular_files = []
-    for f in files:
-        m = client.rfap_info(argument + "/" + f)
-        if m["Type"] == "d":
-            print(Fore.BLUE + f + "/" + Style.RESET_ALL)
-        else:
-            regular_files.append(f)
-    for f in regular_files:
-        print(f)
+    def abspath(self, path: str, pwd: str) -> str:
+        if path == "/":
+            return path
+        if path.startswith("/"):
+            return path
+        if path == ".":
+            return pwd
+        if path == "..":
+            return self.parent_dir(pwd)
 
-def command_read_file(client: librfap.Client, pwd: str, args: list) -> None:
-    try:
-        argument = abspath(args[0], pwd)
-    except IndexError:
-        argument = pwd
-    metadata, content = client.rfap_file_read(argument)
-    if metadata["ErrorCode"] != 0:
-        print(f"{Fore.RED}Error: {metadata['ErrorMessage']}{Style.RESET_ALL}")
-    else:
+        while path.endswith("/"):
+            path = path[:-1]
+        while pwd.endswith("/"):
+            pwd = pwd[:-1]
+
+        if path.startswith("../"):
+            return self.parent_dir(pwd) + "/" + path[3:]
+        if path.startswith("./"):
+            return pwd + "/" + path[2:]
+        return pwd + "/" + path
+
+    def parent_dir(self, path: str) -> str:
+        if path == "/":
+            return "/"
+        return "/" + "/".join(path.split("/")[:-1])
+
+    # cli commands
+    def cmd_cat(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
+            return
+        metadata, content = self.client.rfap_file_read(argument)
+        if metadata["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            return
         if not metadata["FileType"].startswith("text/"):
-            print(Fore.MAGENTA + "Binary file (" + metadata["FileType"] + "), not shown" + Style.RESET_ALL)
+            print(f"{self.style_fg.MAGENTA}{argument}: binary file ({metadata['FileType']}), not shown.{self.style.RESET_ALL}")
             return
         content_string = content.decode("utf-8")
         if not content_string.endswith("\n"):
-            content_string += Fore.BLACK + Back.WHITE + "%" + Style.RESET_ALL + "\n"
+            content_string += f"{self.style_fg.BLACK}{self.style_bg.WHITE}%{self.style.RESET_ALL}\n"
         sys.stdout.write(content_string)
 
-def command_ping(client: librfap.Client) -> None:
-    client.rfap_ping()
-    print(Fore.GREEN + "sent ping" + Style.RESET_ALL)
+    def cmd_cd(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+        except IndexError:
+            argument = "/"
+        if argument == self.pwd:
+            print(f"{self.style_fg.CYAN}{self.pwd}{self.style.RESET_ALL}")
+            return
+        metadata = self.client.rfap_info(argument)
+        if metadata["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}cannot cd to '{argument}': {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            return
+        if metadata["Type"] != "d":
+            print(f"{self.style_fg.RED}cannot cd to '{argument}': not a directory{self.style.RESET_ALL}")
+            return
+        self.pwd = argument
+        print(argument)
 
-def command_info(client: librfap.Client, pwd: str, args: list) -> None:
-    try:
-        argument = abspath(args[0], pwd)
-    except IndexError:
-        argument = pwd
-    metadata = client.rfap_info(argument)
-    print(metadata)
+    def cmd_clear(self):
+        if os.name == "posix":
+            os.system("clear")
+            return
+        if os.name == "nt":
+            os.system("cls")
+            return
+        print(f"{Fore.RED}Error: clear command not available in {os.name} operating system.{Style.RESET_ALL}")
 
-if __name__ == "__main__":
-    print("Welcome to rfap-pycli!")
-    colorama.init()
-    server_address = None
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "s:cd", ["server-address=", "--colored-ls", "--debug"])
-    except getopt.GetoptError:
-        print(sys.argv[0], "[-d] [-c] [-s server_address]")
-        sys.exit(1)
-    for opt, arg in opts:
-        if opt in ("-s", "--server-address"):
-            server_address = arg
-            continue
-        if opt in ("-c", "--colored-ls"):
-            COLORED_LS = True
-        if opt in ("-d", "--debug"):
-            DEBUG = True
-    if server_address is None:
-        server_address = input("server address: ")
+    def cmd_help(self):
+        print(f"{self.style_fg.RED}help is coming soon xD{self.style.RESET_ALL}")
 
-    print(Fore.YELLOW + "Connecting to", server_address + "..." + Style.RESET_ALL)
-    client = librfap.Client(server_address)
-    command_ping(client)
-    print(Fore.GREEN + "Connected successfully" + Style.RESET_ALL)
+    def cmd_info(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+        except IndexError:
+            argument = self.pwd
+        metadata = self.client.rfap_info(argument)
+        pprint.pprint(metadata)
 
-    pwd = "/"
-
-    command, args = enter_command()
-    while command not in ("exit", "quit", ":q"):
-        if command == "help":
-            print(Fore.RED + "help is coming soon xD" + Style.RESET_ALL)
-        elif command == "pwd":
-            print(pwd)
-        elif command == "cd":
-            pwd = command_cd(pwd, args)
-        elif command in ("ls", "list", "dir"):
-            command_read_directory(client, pwd, args)
-        elif command == "info":
-            command_info(client, pwd, args)
-        elif command == "ping":
-            command_ping(client)
-        elif command in ("cat", "read", "print"):
-            command_read_file(client, pwd, args)
-        elif command in ("clear", "cls"):
-            command_clear()
-        elif command == "exec":
-            if DEBUG:
-                exec(input("EXEC> "))
+    def cmd_ls(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+        except IndexError:
+            argument = self.pwd
+        metadata, files = self.client.rfap_directory_read(argument)
+        if metadata["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            return
+        if not self.settings["ColoredLS"]:
+            for f in files:
+                print(f)
+            return
+        regular_files = []
+        for f in files:
+            m = self.client.rfap_info(argument + "/" + f)
+            if m["Type"] == "d":
+                print(f"{self.style_fg.BLUE}{f}/{self.style.RESET_ALL}")
             else:
-                print(Fore.RED + "This command is only available in debug mode." + Style.RESET_ALL)
-        else:
-            print(Fore.RED + command  + ": unknown command, type 'help' for help" + Style.RESET_ALL)
-        command, args = enter_command()
+                regular_files.append(f)
+        for f in regular_files:
+            print(f)
 
-    print(Fore.YELLOW + "disconnecting..." + Style.RESET_ALL)
-    client.rfap_disconnect()
-    print(Fore.GREEN + "done." + Style.RESET_ALL)
+    def cmd_ping(self):
+        self.client.rfap_ping()
+        print(f"{self.style_fg.GREEN}sent ping{self.style.RESET_ALL}")
+
+    # mainloop
+    def run(self):
+        self.enter_cmd()
+        while self.cmd not in ("exit", "quit", ":q"):
+            match self.cmd:
+                case "cat" | "read" | "print":
+                    self.cmd_cat()
+                case "cd":
+                    self.cmd_cd()
+                case "clear" | "cls":
+                    self.cmd_clear()
+                case "debug" | "exec":
+                    if self.settings["Debug"]:
+                        exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
+                    else:
+                        print(f"{self.style_fg.RED}Error: this command is only available in debug mode.{self.style.RESET_ALL}")
+                case "help":
+                    self.cmd_help()
+                case "info":
+                    self.cmd_info()
+                case "ls" | "list" | "dir":
+                    self.cmd_ls()
+                case "ping":
+                    self.cmd_ping()
+                case "pwd":
+                    print(self.pwd)
+                case _:
+                    print(f"{self.style_fg.RED}{self.cmd}: command not found, type 'help' for help{self.style.RESET_ALL}")
+            self.enter_cmd()
+
+        print(f"{self.style_fg.YELLOW}Disconnecting...{self.style.RESET_ALL}")
+        self.client.rfap_disconnect()
+        print(f"{self.style_fg.GREEN}done.{self.style.RESET_ALL}")
+
+# IFMAIN
+if __name__ == "__main__":
+    app = RfapCliApp()
+    app.run()
 
