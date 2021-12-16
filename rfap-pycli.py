@@ -8,6 +8,7 @@ import pprint
 import sys
 import threading
 import time
+import yaml
 
 class RfapCliApp:
     # default settings
@@ -26,6 +27,13 @@ class RfapCliApp:
         self.style = colorama.Style
         self.style_fg = colorama.Fore
         self.style_bg = colorama.Back
+
+        if not os.getenv("RFAP_PYCLI_CONFIG") is None:
+            self.config_file = str(os.getenv("RFAP_PYCLI_CONFIG"))
+        elif not os.getenv("XDG_CONFIG_HOME") is None:
+            self.config_file = os.path.join(str(os.getenv("XDG_CONFIG_HOME")), "rfap-pycli", "config.yml")
+        else:
+            self.config_file = os.path.expanduser("~/.config/rfap-pycli/config.yml")
 
         self.prompt = f"{self.style_fg.CYAN}rfap {self.style_fg.BLUE}%s{self.style.RESET_ALL} > "
         self.pwd = "/"
@@ -48,6 +56,12 @@ class RfapCliApp:
 
     # helper functions
     def configure(self):
+        if os.path.exists(self.config_file):
+            print(f"loading config file {self.config_file}")
+            with open(self.config_file, "r") as f:
+                config = yaml.load(f.read(), Loader=yaml.SafeLoader)
+                if not config is None:
+                    self.settings |= config
         try:
             opts, _ = getopt.getopt(sys.argv[1:], "s:cd", ["server-address=", "--colored-ls", "--debug"])
         except getopt.GetoptError:
@@ -63,6 +77,11 @@ class RfapCliApp:
                 continue
             if opt in ("-d", "--debug"):
                 self.settings["Debug"] = True
+
+    def getenv(self, name, default):
+        if not os.getenv(name) is None:
+            return os.getenv(name)
+        return default
 
     def keep_alive(self):
         while True:
