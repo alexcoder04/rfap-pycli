@@ -5,6 +5,7 @@ import colorama
 from colorama import Fore, Back, Style
 import getopt
 import sys
+import os
 
 PROMPT = Fore.CYAN + "rfap> " + Style.RESET_ALL
 COLORED_LS = False
@@ -37,6 +38,15 @@ def parent_dir(path: str) -> str:
     if path == "/":
         return "/"
     return "/" + "/".join(path.split("/")[:-1])
+
+def command_clear():
+    if os.name == "posix":
+        os.system("clear")
+        return
+    if os.name == "nt":
+        os.system("cls")
+        return
+    print(f"{Fore.RED}Error: clear command not available in {os.name} operating system.{Style.RESET_ALL}")
 
 def command_cd(oldpwd: str, args: list) -> str:
     try:
@@ -76,7 +86,7 @@ def command_read_directory(client: librfap.Client, pwd: str, args: list) -> None
     for f in files:
         m = client.rfap_info(argument + "/" + f)
         if m["Type"] == "d":
-            print(Fore.BLUE + f + Style.RESET_ALL)
+            print(Fore.BLUE + f + "/" + Style.RESET_ALL)
         else:
             regular_files.append(f)
     for f in regular_files:
@@ -154,6 +164,8 @@ if __name__ == "__main__":
             command_ping(client)
         elif command in ("cat", "read", "print"):
             command_read_file(client, pwd, args)
+        elif command in ("clear", "cls"):
+            command_clear()
         elif command == "exec":
             if DEBUG:
                 exec(input("EXEC> "))

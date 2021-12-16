@@ -43,13 +43,15 @@ make install # not working right now, in progress
 
 ### Commands
 
-| commands                                       | description              |
-|------------------------------------------------|--------------------------|
-| `help`                                         | print help               |
-| `pwd`                                          | print working directory  |
-| `cd <folder>`                                  | change working directory |
-| `ls <folder>`, `list <folder>`, `dir <folder>` | list directory           |
-| `exit`, `quit`, `:q`                           | disconnect and exit      |
+| commands                                       | description                              |
+|------------------------------------------------|------------------------------------------|
+| `help`                                         | print help                               |
+| `pwd`                                          | print working directory                  |
+| `cd <folder>`                                  | change working directory                 |
+| `ls <folder>`, `list <folder>`, `dir <folder>` | list directory                           |
+| `clear`, `cls`                                 | clear screen                             |
+| `exit`, `quit`, `:q`                           | disconnect and exit                      |
+| `exec`                                         | execute python command (debug mode only) |
 
 ## Related projects
 
