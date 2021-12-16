@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-import librfap
 import colorama
-import pprint
 import getopt
-import sys
+import librfap
 import os
+import pprint
+import sys
+import threading
+import time
 
 class RfapCliApp:
     # default settings
@@ -34,6 +36,12 @@ class RfapCliApp:
 
         print(f"{self.style_fg.YELLOW}Connecting to {self.settings['Server']}:{self.settings['Port']}...{self.style.RESET_ALL}")
         self.client = librfap.Client(self.settings["Server"], port=self.settings["Port"])
+
+        self.running = True
+        self.keep_alive_thread = threading.Thread(target=self.keep_alive)
+        self.socket_lock = threading.Lock()
+        self.keep_alive_thread.start()
+
         self.cmd_ping()
         print(f"{self.style_fg.GREEN}Connected to {self.settings['Server']}:{self.settings['Port']}{self.style.RESET_ALL}")
 
@@ -54,6 +62,16 @@ class RfapCliApp:
                 continue
             if opt in ("-d", "--debug"):
                 self.settings["Debug"] = True
+
+    def keep_alive(self):
+        while True:
+            for _ in range(12):
+                time.sleep(5)
+                if not self.running:
+                    return
+            self.socket_lock.acquire()
+            self.client.rfap_ping()
+            self.socket_lock.release()
 
     def enter_cmd(self):
         inp = input(self.prompt % self.pwd).split()
@@ -98,7 +116,9 @@ class RfapCliApp:
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
             return
+        self.socket_lock.acquire()
         metadata, content = self.client.rfap_file_read(argument)
+        self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
             return
@@ -118,7 +138,9 @@ class RfapCliApp:
         if argument == self.pwd:
             print(f"{self.style_fg.CYAN}{self.pwd}{self.style.RESET_ALL}")
             return
+        self.socket_lock.acquire()
         metadata = self.client.rfap_info(argument)
+        self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}cannot cd to '{argument}': {metadata['ErrorMessage']}{self.style.RESET_ALL}")
             return
@@ -145,7 +167,9 @@ class RfapCliApp:
             argument = self.abspath(self.args[0], self.pwd)
         except IndexError:
             argument = self.pwd
+        self.socket_lock.acquire()
         metadata = self.client.rfap_info(argument)
+        self.socket_lock.release()
         pprint.pprint(metadata)
 
     def cmd_ls(self):
@@ -153,7 +177,9 @@ class RfapCliApp:
             argument = self.abspath(self.args[0], self.pwd)
         except IndexError:
             argument = self.pwd
+        self.socket_lock.acquire()
         metadata, files = self.client.rfap_directory_read(argument)
+        self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
             return
@@ -163,7 +189,9 @@ class RfapCliApp:
             return
         regular_files = []
         for f in files:
+            self.socket_lock.acquire()
             m = self.client.rfap_info(argument + "/" + f)
+            self.socket_lock.release()
             if m["Type"] == "d":
                 print(f"{self.style_fg.BLUE}{f}/{self.style.RESET_ALL}")
             else:
@@ -172,7 +200,9 @@ class RfapCliApp:
             print(f)
 
     def cmd_ping(self):
+        self.socket_lock.acquire()
         self.client.rfap_ping()
+        self.socket_lock.release()
         print(f"{self.style_fg.GREEN}sent ping{self.style.RESET_ALL}")
 
     def cmd_save(self):
@@ -182,7 +212,9 @@ class RfapCliApp:
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide a remote source and a local destination{self.style.RESET_ALL}")
             return
+        self.socket_lock.acquire()
         metadata, content = self.client.rfap_file_read(argument)
+        self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
             return
@@ -226,7 +258,9 @@ class RfapCliApp:
                     print(f"{self.style_fg.RED}{self.cmd}: command not found, type 'help' for help{self.style.RESET_ALL}")
             self.enter_cmd()
 
-        print(f"{self.style_fg.YELLOW}Disconnecting...{self.style.RESET_ALL}")
+        print(f"{self.style_fg.YELLOW}Disconnecting, please wait...{self.style.RESET_ALL}")
+        self.running = False
+        self.keep_alive_thread.join()
         self.client.rfap_disconnect()
         print(f"{self.style_fg.GREEN}done.{self.style.RESET_ALL}")
 
