@@ -41,9 +41,9 @@ sudo make install
 ./rfap_pycli.py [-s server-address] [-c] [-d]
 ```
 
-### Documentation
+## Documentation
 
-## Commands
+### Commands
 
 | commands                                       | description                              |
 |------------------------------------------------|------------------------------------------|
