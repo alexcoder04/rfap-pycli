@@ -43,14 +43,13 @@ sudo make install
 
 ### Documentation
 
-**Coming soon**
-
-### Commands
+## Commands
 
 | commands                                       | description                              |
 |------------------------------------------------|------------------------------------------|
 | `cat <file>`, `read <file>` `print <file>`     | show content of a file                   |
 | `cd <folder>`                                  | change working directory                 |
+| `cfg`, `config`, `set`                         | change config values for current session |
 | `clear`, `cls`                                 | clear screen                             |
 | `exec`, `debug`                                | execute python command (debug mode only) |
 | `exit`, `quit`, `:q`                           | disconnect and exit                      |

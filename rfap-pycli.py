@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from platform import platform
 import colorama
 import getopt
 import librfap
@@ -22,6 +23,7 @@ class RfapCliApp:
     # app init
     def __init__(self):
         print("Welcome to rfap-pycli!")
+        print(f"OS info: {platform()} with Python {sys.version}")
 
         colorama.init()
         self.style = colorama.Style
@@ -50,6 +52,7 @@ class RfapCliApp:
         self.keep_alive_thread = threading.Thread(target=self.keep_alive)
         self.socket_lock = threading.Lock()
         self.keep_alive_thread.start()
+        print("Started keep-alive-thread")
 
         self.cmd_ping()
         print(f"{self.style_fg.GREEN}Connected to {self.settings['Server']}:{self.settings['Port']}{self.style.RESET_ALL}")
@@ -57,7 +60,7 @@ class RfapCliApp:
     # helper functions
     def configure(self):
         if os.path.exists(self.config_file):
-            print(f"loading config file {self.config_file}")
+            print(f"loading config file {self.config_file}...")
             with open(self.config_file, "r") as f:
                 config = yaml.load(f.read(), Loader=yaml.SafeLoader)
                 if not config is None:
@@ -175,6 +178,21 @@ class RfapCliApp:
         self.pwd = argument
         print(argument)
 
+    def cmd_cfg(self):
+        if len(self.args) == 0:
+            pprint.pprint(self.settings)
+            return
+        try:
+            key, value = self.args[0], self.args[1]
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide a key and a value.{self.style.RESET_ALL}")
+            return
+        if value in ("True", "true", "yes", "Yes", "enable", "Enable"):
+            value = True
+        if value in ("False", "false", "no", "No", "disable", "Disable"):
+            value = False
+        self.settings[key] = value
+
     def cmd_clear(self):
         if os.name == "posix":
             os.system("clear")
@@ -265,6 +283,8 @@ class RfapCliApp:
                         self.cmd_cat()
                     case "cd":
                         self.cmd_cd()
+                    case "cfg" | "config" | "set":
+                        self.cmd_cfg()
                     case "clear" | "cls":
                         self.cmd_clear()
                     case "debug" | "exec":
