@@ -19,11 +19,16 @@ class RfapCliApp:
             "ColoredLS": False,
             "Debug": False
             }
+    SUPPORTED_LIBRFAP_VERSIONS = ["0.2.0", "0.2.1"]
 
     # app init
     def __init__(self):
         print("Welcome to rfap-pycli!")
-        print(f"OS info: {platform()} with Python {sys.version}")
+        print(f"OS info: {platform()} with Python {sys.version}, librfap v{librfap.__version__}")
+        if librfap.__version__ not in self.SUPPORTED_LIBRFAP_VERSIONS:
+            print("Error: you are using an unsupported version of librfap")
+            print(f"{librfap.__version__} not in {self.SUPPORTED_LIBRFAP_VERSIONS}")
+            sys.exit(1)
 
         colorama.init()
         self.style = colorama.Style
