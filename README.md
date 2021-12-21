@@ -45,18 +45,19 @@ sudo make install
 
 ### Commands
 
-| commands                                       | description                              |
-|------------------------------------------------|------------------------------------------|
-| `cat <file>`, `read <file>` `print <file>`     | show content of a file                   |
-| `cd <folder>`                                  | change working directory                 |
-| `cfg`, `config`, `set`                         | change config values for current session |
-| `clear`, `cls`                                 | clear screen                             |
-| `exec`, `debug`                                | execute python command (debug mode only) |
-| `exit`, `quit`, `:q`                           | disconnect and exit                      |
-| `help`                                         | print help                               |
-| `ls <folder>`, `list <folder>`, `dir <folder>` | list directory                           |
-| `pwd`                                          | print working directory                  |
-| `save <file> <local destination>`              | save file locally                        |
+| commands                                                    | description                              |
+|-------------------------------------------------------------|------------------------------------------|
+| `cat <file>`, `read <file>` `print <file>`                  | show content of a file                   |
+| `cd <folder>`                                               | change working directory                 |
+| `cfg`, `config`, `set`                                      | change config values for current session |
+| `clear`, `cls`                                              | clear screen                             |
+| `exec`, `debug`                                             | execute python command (debug mode only) |
+| `exit`, `quit`, `:q`, `disconnect`                          | disconnect and exit                      |
+| `help`                                                      | print help                               |
+| `ls <folder>`, `list <folder>`, `dir <folder>`              | list directory                           |
+| `pwd`                                                       | print working directory                  |
+| `rm <file>`, `remove <file>`, `del <file>`, `delete <file>` | delete file                              |
+| `save <file> <local destination>`                           | save file locally                        |
 
 ## Related projects
 

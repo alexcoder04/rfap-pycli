@@ -257,6 +257,17 @@ class RfapCliApp:
         self.socket_lock.release()
         print(f"{self.style_fg.GREEN}sent ping{self.style.RESET_ALL}")
 
+    def cmd_rm(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide an argument.{self.style.RESET_ALL}")
+            return
+        self.socket_lock.acquire()
+        self.client.rfap_file_delete(argument)
+        self.time_left = 60
+        self.socket_lock.release()
+
     def cmd_save(self):
         try:
             argument = self.abspath(self.args[0], self.pwd)
@@ -281,7 +292,7 @@ class RfapCliApp:
 
     # mainloop
     def run(self):
-        while self.cmd not in ("exit", "quit", ":q"):
+        while self.cmd not in ("exit", "quit", "disconnect", ":q"):
             try:
                 match self.cmd:
                     case "cat" | "read" | "print":
@@ -307,6 +318,8 @@ class RfapCliApp:
                         self.cmd_ping()
                     case "pwd":
                         print(self.pwd)
+                    case "rm" | "remove" | "del" | "delete":
+                        print("in work")
                     case "save" | "download" | "dl":
                         self.cmd_save()
                     case "":
