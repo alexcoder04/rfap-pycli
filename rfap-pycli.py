@@ -19,7 +19,7 @@ class RfapCliApp:
             "ColoredLS": False,
             "Debug": False
             }
-    SUPPORTED_LIBRFAP_VERSIONS = ["0.2.0", "0.2.1"]
+    SUPPORTED_LIBRFAP_VERSIONS = ["0.3.0"]
 
     # app init
     def __init__(self):
@@ -207,6 +207,22 @@ class RfapCliApp:
             return
         print(f"{Fore.RED}Error: clear command not available in {os.name} operating system.{Style.RESET_ALL}")
 
+    def cmd_copy(self):
+        try:
+            source = self.abspath(self.args[0], self.pwd)
+            destin = self.abspath(self.args[1], self.pwd)
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide a source and a destination{self.style.RESET_ALL}")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_file_copy(source, destin)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
+            return
+        print(f"{self.style_fg.GREEN}{self.args[0]} deleted.{self.style.RESET_ALL}")
+
     def cmd_help(self):
         print(f"{self.style_fg.RED}help is coming soon xD{self.style.RESET_ALL}")
 
@@ -250,6 +266,22 @@ class RfapCliApp:
         for f in regular_files:
             print(f)
 
+    def cmd_move(self):
+        try:
+            source = self.abspath(self.args[0], self.pwd)
+            destin = self.abspath(self.args[1], self.pwd)
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide a source and a destination{self.style.RESET_ALL}")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_file_move(source, destin)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
+            return
+        print(f"{self.style_fg.GREEN}{self.args[0]} deleted.{self.style.RESET_ALL}")
+
     def cmd_ping(self):
         self.socket_lock.acquire()
         self.client.rfap_ping()
@@ -264,9 +296,13 @@ class RfapCliApp:
             print(f"{self.style_fg.RED}Error: you need to provide an argument.{self.style.RESET_ALL}")
             return
         self.socket_lock.acquire()
-        self.client.rfap_file_delete(argument)
+        data = self.client.rfap_file_delete(argument)
         self.time_left = 60
         self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
+            return
+        print(f"{self.style_fg.GREEN}{self.args[0]} deleted.{self.style.RESET_ALL}")
 
     def cmd_save(self):
         try:
@@ -290,6 +326,44 @@ class RfapCliApp:
         f.close()
         print(f"{self.style_fg.GREEN}Saved '{argument}' to '{destin}'.{self.style.RESET_ALL}")
 
+    def cmd_touch(self):
+        try:
+            argument = self.abspath(self.args[0], self.pwd)
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_file_create(argument)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] == 0:
+            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}{self.style.RESET_ALL}")
+            return
+        print(f"{self.style_fg.GREEN}Created {argument}.{self.style.RESET_ALL}")
+
+    def cmd_upload(self):
+        try:
+            argument = self.args[0]
+            destin = self.abspath(self.args[1], self.pwd)
+        except IndexError:
+            print(f"{self.style_fg.RED}Error: you need to provide a local source and a remote destination{self.style.RESET_ALL}")
+            return
+        try:
+            f = open(argument, "rb")
+            data = f.read()
+            f.close()
+        except Exception as e:
+            print(f"{self.style_fg.RED}Error reading {argument}: {e}{self.style.RESET_ALL}")
+            return
+        self.socket_lock.acquire()
+        metadata = self.client.rfap_file_write(destin, data)
+        self.time_left = 60
+        self.socket_lock.release()
+        if metadata["ErrorCode"] != 0:
+            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            return
+        print(f"{self.style_fg.GREEN}Uploaded '{argument}' to '{destin}'.{self.style.RESET_ALL}")
+
     # mainloop
     def run(self):
         while self.cmd not in ("exit", "quit", "disconnect", ":q"):
@@ -303,6 +377,8 @@ class RfapCliApp:
                         self.cmd_cfg()
                     case "clear" | "cls":
                         self.cmd_clear()
+                    case "copy" | "cp":
+                        self.cmd_copy()
                     case "debug" | "exec":
                         if self.settings["Debug"]:
                             exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
@@ -314,14 +390,20 @@ class RfapCliApp:
                         self.cmd_info()
                     case "ls" | "list" | "dir":
                         self.cmd_ls()
+                    case "move" | "mv" | "rename":
+                        self.cmd_move()
                     case "ping":
                         self.cmd_ping()
                     case "pwd":
                         print(self.pwd)
                     case "rm" | "remove" | "del" | "delete":
-                        print("in work")
+                        self.cmd_rm()
                     case "save" | "download" | "dl":
                         self.cmd_save()
+                    case "touch" | "create":
+                        self.cmd_touch()
+                    case "upload":
+                        self.cmd_upload()
                     case "":
                         pass
                     case _:
