@@ -60,7 +60,7 @@ class RfapCliApp:
         print("Started keep-alive-thread")
 
         self.cmd_ping()
-        print(f"{self.style_fg.GREEN}Connected to {self.settings['Server']}:{self.settings['Port']}{self.style.RESET_ALL}")
+        self.print_success(f"Connected to {self.settings['Server']}:{self.settings['Port']}")
 
     # helper functions
     def configure(self):
@@ -73,7 +73,7 @@ class RfapCliApp:
         try:
             opts, _ = getopt.getopt(sys.argv[1:], "s:cd", ["server-address=", "--colored-ls", "--debug"])
         except getopt.GetoptError:
-            print(f"{self.style_fg.RED}Error: invalid arguments{self.style.RESET_ALL}")
+            self.print_error(f"invalid arguments")
             print("Usage:", sys.argv[0], "[-d] [-c] [-s server_address]")
             sys.exit(1)
         for opt, arg in opts:
@@ -141,19 +141,25 @@ class RfapCliApp:
             return True
         return False
 
+    def print_success(self, message: str) -> None:
+        print(f"{self.style_fg.GREEN}{message}{self.style.RESET_ALL}")
+
+    def print_error(self, message: str) -> None:
+        print(f"{self.style_fg.RED}Error: {message}.{self.style.RESET_ALL}")
+
     # cli commands
     def cmd_cat(self):
         try:
             argument = self.abspath(self.args[0])
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
+            self.print_error("you need to provide an argument")
             return
         self.socket_lock.acquire()
         metadata, content = self.client.rfap_file_read(argument)
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            self.print_error(f"Error: {metadata['ErrorMessage']}")
             return
         if not metadata["FileType"].startswith("text/"):
             print(f"{self.style_fg.MAGENTA}{argument}: binary file ({metadata['FileType']}), not shown.{self.style.RESET_ALL}")
@@ -176,10 +182,10 @@ class RfapCliApp:
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}cannot cd to '{argument}': {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            self.print_error(f"cannot cd to '{argument}': {metadata['ErrorMessage']}")
             return
         if metadata["Type"] != "d":
-            print(f"{self.style_fg.RED}cannot cd to '{argument}': not a directory{self.style.RESET_ALL}")
+            self.print_error(f"cannot cd to '{argument}': not a directory")
             return
         self.pwd = argument
         print(argument)
@@ -191,7 +197,7 @@ class RfapCliApp:
         try:
             key, value = self.args[0], self.args[1]
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide a key and a value.{self.style.RESET_ALL}")
+            self.print_error("you need to provide a key and a value")
             return
         if value in ("True", "true", "yes", "Yes", "enable", "Enable"):
             value = True
@@ -206,26 +212,26 @@ class RfapCliApp:
         if os.name == "nt":
             os.system("cls")
             return
-        print(f"{Fore.RED}Error: clear command not available in {os.name} operating system.{Style.RESET_ALL}")
+        self.print_error(f"clear command not available in {os.name} operating system")
 
     def cmd_copy(self):
         try:
             source = self.abspath(self.args[0])
             destin = self.abspath(self.args[1])
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide a source and a destination{self.style.RESET_ALL}")
+            self.print_error(f"you need to provide a source and a destination")
             return
         self.socket_lock.acquire()
         data = self.client.rfap_file_copy(source, destin)
         self.time_left = 60
         self.socket_lock.release()
         if data["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
+            self.print_error(data["ErrorMessage"])
             return
-        print(f"{self.style_fg.GREEN}{self.args[0]} copied to {self.args[1]}.{self.style.RESET_ALL}")
+        self.print_success(f"'{self.args[0]}' copied to '{self.args[1]}'.")
 
     def cmd_help(self):
-        print(f"{self.style_fg.RED}help is coming soon xD{self.style.RESET_ALL}")
+        self.print_error("help is coming soon xD")
 
     def cmd_info(self):
         try:
@@ -248,7 +254,7 @@ class RfapCliApp:
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            self.print_error(metadata["ErrorMessage"])
             return
         if not self.settings["ColoredLS"]:
             for f in files:
@@ -272,52 +278,52 @@ class RfapCliApp:
             source = self.abspath(self.args[0])
             destin = self.abspath(self.args[1])
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide a source and a destination{self.style.RESET_ALL}")
+            self.print_error("you need to provide a source and a destination")
             return
         self.socket_lock.acquire()
         data = self.client.rfap_file_move(source, destin)
         self.time_left = 60
         self.socket_lock.release()
         if data["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
+            self.print_error(data["ErrorMessage"])
             return
-        print(f"{self.style_fg.GREEN}{self.args[0]} moved to {self.args[1]}.{self.style.RESET_ALL}")
+        self.print_success(f"'{self.args[0]}' moved to '{self.args[1]}'.")
 
     def cmd_ping(self):
         self.socket_lock.acquire()
         self.client.rfap_ping()
         self.time_left = 60
         self.socket_lock.release()
-        print(f"{self.style_fg.GREEN}sent ping{self.style.RESET_ALL}")
+        self.print_success("sent ping")
 
     def cmd_rm(self):
         try:
             argument = self.abspath(self.args[0])
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide an argument.{self.style.RESET_ALL}")
+            self.print_error("you need to provide an argument")
             return
         self.socket_lock.acquire()
         data = self.client.rfap_file_delete(argument)
         self.time_left = 60
         self.socket_lock.release()
         if data["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
+            self.print_error(data["ErrorMessage"])
             return
-        print(f"{self.style_fg.GREEN}{self.args[0]} deleted.{self.style.RESET_ALL}")
+        self.print_success(f"Deleted '{self.args[0]}'.")
 
     def cmd_save(self):
         try:
             argument = self.abspath(self.args[0])
             destin = self.args[1]
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide a remote source and a local destination{self.style.RESET_ALL}")
+            self.print_error("you need to provide a remote source and a local destination")
             return
         self.socket_lock.acquire()
         metadata, content = self.client.rfap_file_read(argument)
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            self.print_error(metadata["ErrorMessage"])
             return
         if os.path.exists(destin):
             if not self.confirm(f"Warning: '{destin}' already exists. Overwrite"):
@@ -325,45 +331,45 @@ class RfapCliApp:
         f = open(destin, "wb")
         f.write(content)
         f.close()
-        print(f"{self.style_fg.GREEN}Saved '{argument}' to '{destin}'.{self.style.RESET_ALL}")
+        self.print_success(f"Saved '{argument}' to '{destin}'.")
 
     def cmd_touch(self):
         try:
             argument = self.abspath(self.args[0])
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
+            self.print_error("you need to provide an argument")
             return
         self.socket_lock.acquire()
         data = self.client.rfap_file_create(argument)
         self.time_left = 60
         self.socket_lock.release()
         if data["ErrorCode"] == 0:
-            print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}{self.style.RESET_ALL}")
+            self.print_error(data["ErrorMessage"])
             return
-        print(f"{self.style_fg.GREEN}Created {argument}.{self.style.RESET_ALL}")
+        self.print_success(f"Created '{argument}'.")
 
     def cmd_upload(self):
         try:
             argument = self.args[0]
             destin = self.abspath(self.args[1])
         except IndexError:
-            print(f"{self.style_fg.RED}Error: you need to provide a local source and a remote destination{self.style.RESET_ALL}")
+            self.print_error("you need to provide a local source and a remote destination")
             return
         try:
             f = open(argument, "rb")
             data = f.read()
             f.close()
         except Exception as e:
-            print(f"{self.style_fg.RED}Error reading {argument}: {e}{self.style.RESET_ALL}")
+            self.print_error(f"Error reading {argument}: {e}")
             return
         self.socket_lock.acquire()
         metadata = self.client.rfap_file_write(destin, data)
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
-            print(f"{self.style_fg.RED}Error: {metadata['ErrorMessage']}{self.style.RESET_ALL}")
+            self.print_error(metadata["ErrorMessage"])
             return
-        print(f"{self.style_fg.GREEN}Uploaded '{argument}' to '{destin}'.{self.style.RESET_ALL}")
+        self.print_success(f"Uploaded '{argument}' to '{destin}'.")
 
     # mainloop
     def run(self):
@@ -384,7 +390,7 @@ class RfapCliApp:
                         if self.settings["Debug"]:
                             exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
                         else:
-                            print(f"{self.style_fg.RED}Error: this command is only available in debug mode.{self.style.RESET_ALL}")
+                            self.print_error("this command is only available in debug mode")
                     case "help":
                         self.cmd_help()
                     case "info":
@@ -408,7 +414,7 @@ class RfapCliApp:
                     case "":
                         pass
                     case _:
-                        print(f"{self.style_fg.RED}{self.cmd}: command not found, type 'help' for help{self.style.RESET_ALL}")
+                        self.print_error(f"{self.cmd}: command not found, type 'help' for help")
                 self.enter_cmd()
             except KeyboardInterrupt:
                 break
@@ -418,7 +424,7 @@ class RfapCliApp:
         self.keep_alive_thread.join()
         self.client.rfap_disconnect()
         self.time_left = 60
-        print(f"{self.style_fg.GREEN}done.{self.style.RESET_ALL}")
+        self.print_success("done.")
 
 # IFMAIN
 if __name__ == "__main__":
