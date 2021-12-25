@@ -108,26 +108,27 @@ class RfapCliApp:
         inp = input(self.prompt % self.pwd).split()
         self.cmd, self.args = inp[0], tuple(inp[1:])
 
-    def abspath(self, path: str, pwd: str) -> str:
+    def abspath(self, path: str) -> str:
         if path == "/":
             return path
         if path.startswith("/"):
             return path
         if path == ".":
-            return pwd
+            return self.pwd
         if path == "..":
-            return self.parent_dir(pwd)
+            return self.parent_dir(self.pwd)
 
         while path.endswith("/"):
             path = path[:-1]
-        while pwd.endswith("/"):
-            pwd = pwd[:-1]
+        _pwd = self.pwd
+        while _pwd.endswith("/"):
+            _pwd = self.pwd[:-1]
 
         if path.startswith("../"):
-            return self.parent_dir(pwd) + "/" + path[3:]
+            return self.parent_dir(_pwd) + "/" + path[3:]
         if path.startswith("./"):
-            return pwd + "/" + path[2:]
-        return pwd + "/" + path
+            return _pwd + "/" + path[2:]
+        return _pwd + "/" + path
 
     def parent_dir(self, path: str) -> str:
         if path == "/":
@@ -143,7 +144,7 @@ class RfapCliApp:
     # cli commands
     def cmd_cat(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
             return
@@ -164,7 +165,7 @@ class RfapCliApp:
 
     def cmd_cd(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
         except IndexError:
             argument = "/"
         if argument == self.pwd:
@@ -209,8 +210,8 @@ class RfapCliApp:
 
     def cmd_copy(self):
         try:
-            source = self.abspath(self.args[0], self.pwd)
-            destin = self.abspath(self.args[1], self.pwd)
+            source = self.abspath(self.args[0])
+            destin = self.abspath(self.args[1])
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide a source and a destination{self.style.RESET_ALL}")
             return
@@ -221,14 +222,14 @@ class RfapCliApp:
         if data["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
             return
-        print(f"{self.style_fg.GREEN}{self.args[0]} deleted.{self.style.RESET_ALL}")
+        print(f"{self.style_fg.GREEN}{self.args[0]} copied to {self.args[1]}.{self.style.RESET_ALL}")
 
     def cmd_help(self):
         print(f"{self.style_fg.RED}help is coming soon xD{self.style.RESET_ALL}")
 
     def cmd_info(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
         except IndexError:
             argument = self.pwd
         self.socket_lock.acquire()
@@ -239,7 +240,7 @@ class RfapCliApp:
 
     def cmd_ls(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
         except IndexError:
             argument = self.pwd
         self.socket_lock.acquire()
@@ -268,8 +269,8 @@ class RfapCliApp:
 
     def cmd_move(self):
         try:
-            source = self.abspath(self.args[0], self.pwd)
-            destin = self.abspath(self.args[1], self.pwd)
+            source = self.abspath(self.args[0])
+            destin = self.abspath(self.args[1])
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide a source and a destination{self.style.RESET_ALL}")
             return
@@ -280,7 +281,7 @@ class RfapCliApp:
         if data["ErrorCode"] != 0:
             print(f"{self.style_fg.RED}Error: {data['ErrorMessage']}.{self.style.RESET_ALL}")
             return
-        print(f"{self.style_fg.GREEN}{self.args[0]} deleted.{self.style.RESET_ALL}")
+        print(f"{self.style_fg.GREEN}{self.args[0]} moved to {self.args[1]}.{self.style.RESET_ALL}")
 
     def cmd_ping(self):
         self.socket_lock.acquire()
@@ -291,7 +292,7 @@ class RfapCliApp:
 
     def cmd_rm(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide an argument.{self.style.RESET_ALL}")
             return
@@ -306,7 +307,7 @@ class RfapCliApp:
 
     def cmd_save(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
             destin = self.args[1]
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide a remote source and a local destination{self.style.RESET_ALL}")
@@ -328,7 +329,7 @@ class RfapCliApp:
 
     def cmd_touch(self):
         try:
-            argument = self.abspath(self.args[0], self.pwd)
+            argument = self.abspath(self.args[0])
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide an argument{self.style.RESET_ALL}")
             return
@@ -344,7 +345,7 @@ class RfapCliApp:
     def cmd_upload(self):
         try:
             argument = self.args[0]
-            destin = self.abspath(self.args[1], self.pwd)
+            destin = self.abspath(self.args[1])
         except IndexError:
             print(f"{self.style_fg.RED}Error: you need to provide a local source and a remote destination{self.style.RESET_ALL}")
             return
