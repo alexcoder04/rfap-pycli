@@ -230,6 +230,46 @@ class RfapCliApp:
             return
         self.print_success(f"'{self.args[0]}' copied to '{self.args[1]}'.")
 
+    def cmd_copydir(self):
+        try:
+            source = self.abspath(self.args[0])
+            destin = self.abspath(self.args[1])
+        except IndexError:
+            self.print_error(f"you need to provide a source and a destination")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_directory_copy(source, destin)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            self.print_error(data["ErrorMessage"])
+            return
+        self.print_success(f"'{self.args[0]}' copied to '{self.args[1]}'.")
+
+    def cmd_edit(self):
+        try:
+            argument = self.abspath(self.args[0])
+        except IndexError:
+            self.print_error(f"you need to provide a file to edit")
+            return
+        data = []
+        print("Enter the file content. Type '*EXIT' to abort. Type '*EOF' if you are done.")
+        line = input(f"{self.style_fg.CYAN}| {self.style.RESET_ALL}")
+        while line != "*EOF":
+            if line == "*EXIT":
+                self.print_error("writing to file aborted")
+                return
+            data.append(line)
+            line = input(f"{self.style_fg.CYAN}| {self.style.RESET_ALL}")
+        self.socket_lock.acquire()
+        metadata = self.client.rfap_file_write(argument, "\n".join(data).encode("utf-8"))
+        self.time_left = 60
+        self.socket_lock.release()
+        if metadata["ErrorCode"] != 0:
+            self.print_error(metadata["ErrorMessage"])
+            return
+        self.print_success(f"'{self.args[0]}' updated.")
+
     def cmd_help(self):
         self.print_error("help is coming soon xD")
 
@@ -289,6 +329,22 @@ class RfapCliApp:
             return
         self.print_success(f"'{self.args[0]}' moved to '{self.args[1]}'.")
 
+    def cmd_movedir(self):
+        try:
+            source = self.abspath(self.args[0])
+            destin = self.abspath(self.args[1])
+        except IndexError:
+            self.print_error("you need to provide a source and a destination")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_directory_move(source, destin)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            self.print_error(data["ErrorMessage"])
+            return
+        self.print_success(f"'{self.args[0]}' moved to '{self.args[1]}'.")
+
     def cmd_ping(self):
         self.socket_lock.acquire()
         self.client.rfap_ping()
@@ -304,6 +360,21 @@ class RfapCliApp:
             return
         self.socket_lock.acquire()
         data = self.client.rfap_file_delete(argument)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            self.print_error(data["ErrorMessage"])
+            return
+        self.print_success(f"Deleted '{self.args[0]}'.")
+
+    def cmd_rmdir(self):
+        try:
+            argument = self.abspath(self.args[0])
+        except IndexError:
+            self.print_error("you need to provide an argument")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_directory_delete(argument)
         self.time_left = 60
         self.socket_lock.release()
         if data["ErrorCode"] != 0:
@@ -386,11 +457,15 @@ class RfapCliApp:
                         self.cmd_clear()
                     case "copy" | "cp":
                         self.cmd_copy()
+                    case "copydir" | "cpdir":
+                        self.cmd_copydir()
                     case "debug" | "exec":
                         if self.settings["Debug"]:
                             exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
                         else:
                             self.print_error("this command is only available in debug mode")
+                    case "edit" | "write":
+                        self.cmd_edit()
                     case "help":
                         self.cmd_help()
                     case "info":
@@ -399,12 +474,16 @@ class RfapCliApp:
                         self.cmd_ls()
                     case "move" | "mv" | "rename":
                         self.cmd_move()
+                    case "movedir" | "mvdir":
+                        self.cmd_movedir()
                     case "ping":
                         self.cmd_ping()
                     case "pwd":
                         print(self.pwd)
                     case "rm" | "remove" | "del" | "delete":
                         self.cmd_rm()
+                    case "rmdir" | "deldir":
+                        self.cmd_rmdir()
                     case "save" | "download" | "dl":
                         self.cmd_save()
                     case "touch" | "create":
