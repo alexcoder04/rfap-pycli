@@ -53,11 +53,12 @@ sudo make install
 | `clear`, `cls`                                                               | clear screen                             |
 | `copy <source> <destin>`, `cp <source> <destin>`                             | copy file from source to destination     |
 | `copydir <source> <destin>`, `cpdir <source> <destin>`                       | copy folder from source to destination   |
-| `edit <file>`, `write <file>`                                                | enter new content for a file             |
+| `edit <file>`, `write <file>`, `v <file>`                                    | enter new content for a file             |
 | `exec`, `debug`                                                              | execute python command (debug mode only) |
 | `exit`, `quit`, `:q`, `disconnect`                                           | disconnect and exit                      |
 | `help`                                                                       | print help                               |
 | `ls <folder>`, `list <folder>`, `dir <folder>`                               | list directory                           |
+| `mkdir <folder>`, `makedir <folder>`                                         | create directory                         |
 | `move <source> <destin>`, `mv <source> <destin>`, `rename <source> <destin>` | move file from source to destination     |
 | `movedir <source> <destin>`, `mvdir <source> <destin>`                       | move folder from source to destination   |
 | `pwd`                                                                        | print working directory                  |

@@ -253,14 +253,16 @@ class RfapCliApp:
             self.print_error(f"you need to provide a file to edit")
             return
         data = []
+        i = 1
         print("Enter the file content. Type '*EXIT' to abort. Type '*EOF' if you are done.")
-        line = input(f"{self.style_fg.CYAN}| {self.style.RESET_ALL}")
+        line = input(f"{self.style_fg.CYAN}{i}{(3 - len(str(i))) * ' '}| {self.style.RESET_ALL}")
         while line != "*EOF":
             if line == "*EXIT":
                 self.print_error("writing to file aborted")
                 return
             data.append(line)
-            line = input(f"{self.style_fg.CYAN}| {self.style.RESET_ALL}")
+            i += 1
+            line = input(f"{self.style_fg.CYAN}{i}{(3 - len(str(i))) * ' '}| {self.style.RESET_ALL}")
         self.socket_lock.acquire()
         metadata = self.client.rfap_file_write(argument, "\n".join(data).encode("utf-8"))
         self.time_left = 60
@@ -345,6 +347,21 @@ class RfapCliApp:
             return
         self.print_success(f"'{self.args[0]}' moved to '{self.args[1]}'.")
 
+    def cmd_mkdir(self):
+        try:
+            argument = self.abspath(self.args[0])
+        except IndexError:
+            self.print_error("you need to provide an argument")
+            return
+        self.socket_lock.acquire()
+        data = self.client.rfap_directory_create(argument)
+        self.time_left = 60
+        self.socket_lock.release()
+        if data["ErrorCode"] != 0:
+            self.print_error(data["ErrorMessage"])
+            return
+        self.print_success(f"Created '{argument}'.")
+
     def cmd_ping(self):
         self.socket_lock.acquire()
         self.client.rfap_ping()
@@ -414,7 +431,7 @@ class RfapCliApp:
         data = self.client.rfap_file_create(argument)
         self.time_left = 60
         self.socket_lock.release()
-        if data["ErrorCode"] == 0:
+        if data["ErrorCode"] != 0:
             self.print_error(data["ErrorMessage"])
             return
         self.print_success(f"Created '{argument}'.")
@@ -464,7 +481,7 @@ class RfapCliApp:
                             exec(input(f"{self.style_fg.RED}exec> {self.style.RESET_ALL}"))
                         else:
                             self.print_error("this command is only available in debug mode")
-                    case "edit" | "write":
+                    case "edit" | "write" | "v":
                         self.cmd_edit()
                     case "help":
                         self.cmd_help()
@@ -472,6 +489,8 @@ class RfapCliApp:
                         self.cmd_info()
                     case "ls" | "list" | "dir":
                         self.cmd_ls()
+                    case "mkdir" | "makedir":
+                        self.cmd_mkdir()
                     case "move" | "mv" | "rename":
                         self.cmd_move()
                     case "movedir" | "mvdir":
