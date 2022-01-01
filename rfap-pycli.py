@@ -7,6 +7,7 @@ import librfap
 import os
 import pprint
 import sys
+import tempfile
 import threading
 import time
 import yaml
@@ -17,7 +18,9 @@ class RfapCliApp:
             "Server": "localhost",
             "Port": 6700,
             "ColoredLS": False,
-            "Debug": False
+            "Debug": False,
+            "Editor": "[built-in]",
+            "Tempfile": os.path.join(tempfile.gettempdir(), "rfap-pycli.temp")
             }
     SUPPORTED_LIBRFAP_VERSIONS = ["0.3.0"]
 
@@ -35,10 +38,10 @@ class RfapCliApp:
         self.style_fg = colorama.Fore
         self.style_bg = colorama.Back
 
-        if not os.getenv("RFAP_PYCLI_CONFIG") is None:
-            self.config_file = str(os.getenv("RFAP_PYCLI_CONFIG"))
-        elif not os.getenv("XDG_CONFIG_HOME") is None:
-            self.config_file = os.path.join(str(os.getenv("XDG_CONFIG_HOME")), "rfap-pycli", "config.yml")
+        if not (config := os.getenv("RFAP_PYCLI_CONFIG")) is None:
+            self.config_file = config
+        elif not (xdg_config := os.getenv("XDG_CONFIG_HOME")) is None:
+            self.config_file = os.path.join(xdg_config, "rfap-pycli", "config.yml")
         else:
             self.config_file = os.path.expanduser("~/.config/rfap-pycli/config.yml")
 
@@ -85,6 +88,8 @@ class RfapCliApp:
                 continue
             if opt in ("-d", "--debug"):
                 self.settings["Debug"] = True
+        if (editor := os.getenv("EDITOR")) is not None:
+            self.settings["Editor"] = editor
 
     def getenv(self, name, default):
         if not os.getenv(name) is None:
@@ -147,6 +152,29 @@ class RfapCliApp:
     def print_error(self, message: str) -> None:
         print(f"{self.style_fg.RED}Error: {message}.{self.style.RESET_ALL}")
 
+    def built_in_editor(self):
+        data = []
+        i = 1
+        print("Enter the file content. Type '*EXIT' to abort. Type '*EOF' if you are done.")
+        line = input(f"{self.style_fg.CYAN}{i}{(3 - len(str(i))) * ' '}| {self.style.RESET_ALL}")
+        while line != "*EOF":
+            if line == "*EXIT":
+                return None
+            data.append(line)
+            i += 1
+            line = input(f"{self.style_fg.CYAN}{i}{(3 - len(str(i))) * ' '}| {self.style.RESET_ALL}")
+        return "\n".join(data).encode("utf-8")
+
+    def external_editor(self):
+        print("starting external editor...")
+        ret = os.system(f"{self.settings['Editor']} '{self.settings['Tempfile']}'")
+        if ret != 0:
+            return None
+        if not os.path.exists(self.settings["Tempfile"]):
+            return None
+        with open(self.settings["Tempfile"], "rb") as f:
+            return f.read()
+
     # cli commands
     def cmd_cat(self):
         try:
@@ -159,7 +187,7 @@ class RfapCliApp:
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
-            self.print_error(f"Error: {metadata['ErrorMessage']}")
+            self.print_error(metadata["ErrorMessage"])
             return
         if not metadata["FileType"].startswith("text/"):
             print(f"{self.style_fg.MAGENTA}{argument}: binary file ({metadata['FileType']}), not shown.{self.style.RESET_ALL}")
@@ -252,19 +280,20 @@ class RfapCliApp:
         except IndexError:
             self.print_error(f"you need to provide a file to edit")
             return
-        data = []
-        i = 1
-        print("Enter the file content. Type '*EXIT' to abort. Type '*EOF' if you are done.")
-        line = input(f"{self.style_fg.CYAN}{i}{(3 - len(str(i))) * ' '}| {self.style.RESET_ALL}")
-        while line != "*EOF":
-            if line == "*EXIT":
-                self.print_error("writing to file aborted")
-                return
-            data.append(line)
-            i += 1
-            line = input(f"{self.style_fg.CYAN}{i}{(3 - len(str(i))) * ' '}| {self.style.RESET_ALL}")
+        if self.settings["Editor"] == "[built-in]":
+            content = self.built_in_editor()
+        else:
+            print("loading file content...")
+            metadata, content = self.client.rfap_file_read(argument)
+            with open(self.settings["Tempfile"], "wb") as f:
+                f.write(content)
+            content = self.external_editor()
+            os.remove(self.settings["Tempfile"])
+        if content is None:
+            self.print_error("writing to file aborted")
+            return
         self.socket_lock.acquire()
-        metadata = self.client.rfap_file_write(argument, "\n".join(data).encode("utf-8"))
+        metadata = self.client.rfap_file_write(argument, content)
         self.time_left = 60
         self.socket_lock.release()
         if metadata["ErrorCode"] != 0:
