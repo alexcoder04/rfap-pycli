@@ -1,4 +1,11 @@
 
+# Archivation Note
+
+As of now, I lost interest on this project and shifted focus to other things. That's why I have to archive rfap-pycli in an unfinished state.
+If you are interested in continuing this project, please email me, so I can explain some details to you or unarchive this repo and add you as contributor.
+
+---
+
 # rfap-pycli
 
 [![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/alexcoder04/rfap-pycli?include_prereleases)](https://github.com/alexcoder04/rfap-pycli/releases/latest)
